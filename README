@@ -1,0 +1,127 @@
+# Docker CI/CD Pipeline with GitHub Actions
+
+This project demonstrates a complete CI/CD pipeline using Docker and GitHub Actions.
+Whenever code is pushed to the main branch, GitHub Actions automatically:
+
+1. Checks out the repository
+2. Builds a Docker image using the project's Dockerfile
+3. Tags the image with the correct Docker Hub repository name
+4. Authenticates to Docker Hub using GitHub Secrets
+5. Pushes the image to Docker Hub
+
+This setup follows standard DevOps practices for container-based CI/CD pipelines.
+
+---
+
+## What This Project Does
+
+- Builds a Docker image from application source code
+- Uses GitHub Actions to automate Docker builds
+- Tags the image with a Docker Hub repository name
+- Pushes the image to Docker Hub
+- Ensures consistent, reproducible images using CI/CD
+- Demonstrates real-world DevOps workflow design
+
+---
+
+## How It Works
+
+### 1. GitHub Actions Workflow
+
+The workflow file located in .github/workflows/docker-ci.yml:
+
+- Checks out the repository
+- Logs into Docker Hub using secrets
+- Builds the Docker image
+- Tags the image according to your Docker Hub repository
+- Pushes the image to Docker Hub
+
+This process happens automatically on pushes to the main branch or manually when triggered.
+
+---
+
+### 2. Docker Hub Integration
+
+The workflow authenticates to Docker Hub using two GitHub Secrets:
+
+DOCKER_USERNAME  
+DOCKER_PASSWORD
+
+DOCKER_PASSWORD should be a Docker Hub access token created in Docker Hub → Account Settings → Security.
+
+Secrets ensure your credentials never appear in logs or code.
+
+---
+
+### 3. Docker Image Tagging
+
+The workflow tags the Docker image using your Docker Hub repository name, for example:
+
+yourusername/yourimage:latest
+
+This tag tells Docker Hub where to store the image.
+
+Additional tags like version numbers or commit SHAs can also be added for rollback support.
+
+---
+
+## GitHub Secrets Required
+
+Add these secrets in:
+
+GitHub → Repository → Settings → Secrets and variables → Actions
+
+DOCKER_USERNAME  
+Your Docker Hub username.
+
+DOCKER_PASSWORD  
+A Docker Hub access token (recommended over using your password).
+
+---
+
+## Workflow Triggers
+
+The workflow runs automatically when:
+
+- Code is pushed to the main branch
+
+It can also be triggered manually using “Run Workflow” inside GitHub Actions.
+
+This supports both automated CI and manual builds.
+
+---
+
+## Running the Workflow Manually
+
+Navigate to:
+
+GitHub → Actions → Select workflow → Run workflow
+
+You may want to trigger the workflow manually when:
+
+- Testing the pipeline
+- Rebuilding after changing secrets
+- Deploying without making new commits
+
+---
+
+## Repository Structure
+
+project/
+Dockerfile  
+ app/ (your application code)  
+ .github/workflows/docker-ci.yml
+
+---
+
+## Summary
+
+This repository contains a complete CI/CD pipeline that:
+
+- Builds Docker images automatically
+- Uses GitHub Actions as the automation engine
+- Pushes images to Docker Hub securely
+- Ensures consistent and reproducible builds
+- Demonstrates essential DevOps and cloud engineering skills
+
+This setup is suitable for portfolio use, interviews, and real-world containerized application deployments.
