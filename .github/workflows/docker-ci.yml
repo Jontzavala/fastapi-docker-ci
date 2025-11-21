@@ -38,6 +38,7 @@ jobs:
           username: ${{ secrets.EC2_USER }} # e.g. ubuntu
           key: ${{ secrets.EC2_SSH_KEY }} # contents of your .pem
           port: ${{ secrets.EC2_PORT }} # usually 22
+          envs: DOCKER_USERNAME,DOCKER_PASSWORD
           script: |
             # Log in to Docker Hub
             echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
