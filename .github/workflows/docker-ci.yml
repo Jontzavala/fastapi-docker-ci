@@ -29,7 +29,9 @@ jobs:
           python -c "import fastapi; print('FastAPI OK')"
           python -c "import uvicorn; print('Uvicorn OK')"
       - name: Run tests
-        run: pytest -q
+        run: |
+          export PYTHONPATH=$PYTHONPATH:$(pwd)
+          pytest -q
 
   build-and-push:
     needs: python-ci
