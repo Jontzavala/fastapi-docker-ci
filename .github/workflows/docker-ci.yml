@@ -28,6 +28,8 @@ jobs:
         run: |
           python -c "import fastapi; print('FastAPI OK')"
           python -c "import uvicorn; print('Uvicorn OK')"
+      - name: Run tests
+        run: pytest -q
 
   build-and-push:
     needs: python-ci
