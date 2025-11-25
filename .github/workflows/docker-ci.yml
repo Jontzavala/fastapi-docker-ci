@@ -33,8 +33,35 @@ jobs:
           export PYTHONPATH=$PYTHONPATH:$(pwd)
           pytest -q
 
-  build-and-push:
+  docker-validate:
+    name: Validate Docker Image
     needs: python-ci
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build Docker image for validation
+        run: docker build -t fastapi-app-test .
+
+      - name: Run container
+        run: docker run -d -p 8000:8000 --name fastapi-test fastapi-app-test
+
+      - name: Wait for container startup
+        run: sleep 3
+
+      - name: Test container endpoint
+        run: curl -f http://localhost:8000
+
+      - name: Stop container
+        run: docker stop fastapi-test
+
+      - name: Remove container
+        run: docker rm fastapi-test
+
+  build-and-push:
+    needs: docker-validate
     runs-on: ubuntu-latest
 
     steps:
