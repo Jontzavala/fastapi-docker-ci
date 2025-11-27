@@ -93,7 +93,7 @@ jobs:
           username: ${{ secrets.EC2_USER }} # e.g. ubuntu
           key: ${{ secrets.EC2_SSH_KEY }} # contents of your .pem
           port: ${{ secrets.EC2_PORT }} # usually 22
-          envs: DOCKER_USERNAME,DOCKER_PASSWORD
+          envs: DOCKER_USERNAME,DOCKER_PASSWORD,APP_ENV
           script: |
             # Log in to Docker Hub
             echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
@@ -109,7 +109,9 @@ jobs:
             docker run -d \
               --name fastapi-app \
               -p 8000:8000 \
+              -e APP_ENV=${APP_ENV} \
               ${DOCKER_USERNAME}/fastapi-demo:latest
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+          APP_ENV: ${{ secrets.APP_ENV }}
