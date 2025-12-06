@@ -70,7 +70,7 @@ jobs:
             # Pull latest image
             docker pull jontzavala/fastapi-demo:latest
 
-            docker compose up -d jontzavala/fastapi-demo:latest
+            docker compose up -d fastapi-app
 
             # Health check
             sleep 3

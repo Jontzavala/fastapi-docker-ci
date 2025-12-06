@@ -1,5 +1,5 @@
 services:
-  app:
+  fastapi-app:
     image: jontzavala/fastapi-demo:latest
     container_name: fastapi-app
     ports:
