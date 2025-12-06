@@ -63,10 +63,9 @@ jobs:
       - name: Deploy via SSH to EC2
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ secrets.EC2_HOST }} # e.g. 54.235.231.28
-          username: ${{ secrets.EC2_USER }} # e.g. ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }} # contents of your .pem
-          port: ${{ secrets.EC2_PORT }} # usually 22
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             # Log in to Docker Hub
             echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
