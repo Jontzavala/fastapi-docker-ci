@@ -20,13 +20,13 @@ jobs:
         with:
           python-version: ${{ inputs.python-version }}
           cache: "pip"
-          cache-dependency-path: "requirements.txt"
+          cache-dependency-path: "app/requirements.txt"
 
       - name: Install requirements
-        run: pip install -r requirements.txt
+        run: pip install -r app/requirements.txt
 
-      - name: Export PYTHONPATH
-        run: echo "PYTHONPATH=$PYTHONPATH:$(pwd)" >> $GITHUB_ENV
+      # - name: Export PYTHONPATH
+      #   run: echo "PYTHONPATH=$PYTHONPATH:$(pwd)" >> $GITHUB_ENV
 
       - name: Run tests
         run: pytest -q
