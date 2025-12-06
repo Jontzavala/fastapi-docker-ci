@@ -68,7 +68,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             # Pull latest image
-            docker pull $IMAGE_NAME
+            docker pull jontzavala/fastapi-demo:latest
 
             # Stop & remove old container if it exists
             docker stop fastapi-app || true
@@ -80,7 +80,7 @@ jobs:
               --restart unless-stopped \
               -p 8000:8000 \
               -e APP_ENV=${APP_ENV} \
-              $IMAGE_NAME
+              jontzavala/fastapi-demo:latest
 
             # Health check
             sleep 3
