@@ -4,6 +4,12 @@ concurrency:
   group: deploy-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+  DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+  APP_ENV: ${{ secrets.APP_ENV }}
+  IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/fastapi-demo:latest
+
 on:
   push:
     branches: ["main"]
@@ -15,7 +21,7 @@ jobs:
     with:
       python-version: "3.11"
 
-  docker-validate:
+  docker-build-push:
     name: Validate Docker Image
     needs: python-ci
     runs-on: ubuntu-latest
@@ -24,11 +30,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Log in to Docker Hub
+        run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+
       - name: Build Docker image for validation
-        run: docker build -t fastapi-app-test .
+        run: docker build -t $IMAGE_NAME app
 
       - name: Run container
-        run: docker run -d -p 8000:8000 --name fastapi-test fastapi-app-test
+        run: docker run -d -p 8000:8000 --name fastapi-test $IMAGE_NAME
 
       - name: Wait for container startup
         run: sleep 3
@@ -42,29 +51,12 @@ jobs:
       - name: Remove container
         run: docker rm fastapi-test
 
-  build-and-push:
-    needs: docker-validate
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Log in to Docker Hub
-        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
-
-      - name: Build Docker image
-        run: docker build -t fastapi-app .
-
-      - name: Tag Docker image
-        run: docker tag fastapi-app ${{ secrets.DOCKER_USERNAME }}/fastapi-demo:latest
-
       - name: Push Docker image
-        run: docker push ${{ secrets.DOCKER_USERNAME }}/fastapi-demo:latest
+        run: docker push $IMAGE_NAME
 
   deploy:
     name: Deploy to EC2
-    needs: build-and-push
+    needs: docker-build-push
     runs-on: ubuntu-latest
 
     steps:
@@ -75,13 +67,12 @@ jobs:
           username: ${{ secrets.EC2_USER }} # e.g. ubuntu
           key: ${{ secrets.EC2_SSH_KEY }} # contents of your .pem
           port: ${{ secrets.EC2_PORT }} # usually 22
-          envs: DOCKER_USERNAME,DOCKER_PASSWORD,APP_ENV
           script: |
             # Log in to Docker Hub
             echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
 
             # Pull latest image
-            docker pull ${DOCKER_USERNAME}/fastapi-demo:latest
+            docker pull $IMAGE_NAME
 
             # Stop & remove old container if it exists
             docker stop fastapi-app || true
@@ -93,12 +84,8 @@ jobs:
               --restart unless-stopped \
               -p 8000:8000 \
               -e APP_ENV=${APP_ENV} \
-              ${DOCKER_USERNAME}/fastapi-demo:latest
+              $IMAGE_NAME
 
             # Health check
             sleep 3
             curl -f http://localhost:8000 || (echo "Health check FAILED" && docker logs fastapi-app --tail 50 && exit 1)
-        env:
-          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-          APP_ENV: ${{ secrets.APP_ENV }}
