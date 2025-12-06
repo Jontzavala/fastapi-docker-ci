@@ -74,4 +74,4 @@ jobs:
 
             # Health check
             sleep 3
-            curl -f http://localhost:8000 || (echo "Health check FAILED" && docker logs fastapi-app --tail 50 && exit 1)
+            curl -f http://localhost || (echo "Health check FAILED" && docker logs fastapi-app --tail 50 && exit 1)
