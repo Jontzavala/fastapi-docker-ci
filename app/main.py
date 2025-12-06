@@ -11,4 +11,4 @@ def get_env():
 
 @app.get("/")
 def read_root():
-    return {"message": "Hello from inside a Docker container!!"}
+    return {"message": "Hello!"}
