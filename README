@@ -1,127 +1,105 @@
-# Docker CI/CD Pipeline with GitHub Actions
+# fastapi-docker-ci
 
-This project demonstrates a complete CI/CD pipeline using Docker and GitHub Actions.
-Whenever code is pushed to the main branch, GitHub Actions automatically:
+A small FastAPI example demonstrating building a Docker image, running tests in CI, pushing the image to Docker Hub, and a basic SSH-based deploy step.
 
-1. Checks out the repository
-2. Builds a Docker image using the project's Dockerfile
-3. Tags the image with the correct Docker Hub repository name
-4. Authenticates to Docker Hub using GitHub Secrets
-5. Pushes the image to Docker Hub
+This README documents repository layout, how to run locally, CI/CD behavior, required secrets, and troubleshooting steps.
 
-This setup follows standard DevOps practices for container-based CI/CD pipelines.
+## Repository layout (observed)
 
----
+- `.github/workflows/docker-ci.yml` — main workflow that runs tests, builds the image using the `app/` build context, validates the container, pushes the image, and includes an SSH deploy step.
+- `.github/workflows/test-template.yml` — reusable workflow used for running Python tests (it installs `app/requirements.txt` and runs pytest in `./app`).
+- `app/` — application directory (contains app code and `requirements.txt`).
+- `Dockerfile` — image build instructions (CI currently builds with `app` as context).
 
-## What This Project Does
-
-- Builds a Docker image from application source code
-- Uses GitHub Actions to automate Docker builds
-- Tags the image with a Docker Hub repository name
-- Pushes the image to Docker Hub
-- Ensures consistent, reproducible images using CI/CD
-- Demonstrates real-world DevOps workflow design
+> Note: CI builds with `docker build -t <image> app` and test steps run with `working-directory: ./app`. Keep application files and `requirements.txt` under `app/` unless you update the workflows.
 
 ---
 
-## How It Works
+## Run locally
 
-### 1. GitHub Actions Workflow
+Build and run the same image CI produces:
 
-The workflow file located in .github/workflows/docker-ci.yml:
+```bash
+# build using the app/ context (same as CI)
+docker build -t yourusername/fastapi-demo:local app
 
-- Checks out the repository
-- Logs into Docker Hub using secrets
-- Builds the Docker image
-- Tags the image according to your Docker Hub repository
-- Pushes the image to Docker Hub
+# run
+docker run --rm -p 8000:8000 yourusername/fastapi-demo:local
+# open http://localhost:8000/
+```
 
-This process happens automatically on pushes to the main branch or manually when triggered.
+Alternative: if you want to build from repo root (Dockerfile at repo root):
 
----
+```bash
+docker build -t yourusername/fastapi-demo:local .
+```
 
-### 2. Docker Hub Integration
+Run tests locally:
 
-The workflow authenticates to Docker Hub using two GitHub Secrets:
-
-DOCKER_USERNAME  
-DOCKER_PASSWORD
-
-DOCKER_PASSWORD should be a Docker Hub access token created in Docker Hub → Account Settings → Security.
-
-Secrets ensure your credentials never appear in logs or code.
-
----
-
-### 3. Docker Image Tagging
-
-The workflow tags the Docker image using your Docker Hub repository name, for example:
-
-yourusername/yourimage:latest
-
-This tag tells Docker Hub where to store the image.
-
-Additional tags like version numbers or commit SHAs can also be added for rollback support.
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r app/requirements.txt
+pytest -q
+```
 
 ---
 
-## GitHub Secrets Required
+## CI / CD behavior (what the workflows do)
 
-Add these secrets in:
-
-GitHub → Repository → Settings → Secrets and variables → Actions
-
-DOCKER_USERNAME  
-Your Docker Hub username.
-
-DOCKER_PASSWORD  
-A Docker Hub access token (recommended over using your password).
+1. `test-template.yml` (reusable): sets up Python, installs `app/requirements.txt`, and runs `pytest` in `./app`.
+2. `docker-ci.yml`:
+   - Runs the reusable `python-ci` job (tests).
+   - Builds the Docker image using `app` as the build context: `docker build -t $IMAGE_NAME app`.
+   - Runs the built image locally in the runner and validates the HTTP endpoint with `curl -f http://localhost:8000`.
+   - If validation passes, pushes the image to Docker Hub (image name comes from `IMAGE_NAME` env/read from secrets).
+   - Performs a deploy step using `appleboy/ssh-action` that SSHes to a host, pulls the image, runs `docker compose up -d fastapi-app`, and performs a remote health check with `curl -f http://localhost`.
 
 ---
 
-## Workflow Triggers
+## Required repository secrets (set in GitHub → Settings → Secrets and variables → Actions)
 
-The workflow runs automatically when:
+- `DOCKER_USERNAME` — Docker Hub username
+- `DOCKER_PASSWORD` — Docker Hub password or access token
+- `APP_ENV` — optional environment variable used by workflow
+- `EC2_HOST` — target host for SSH deploy (if using the provided deploy step)
+- `EC2_USER` — SSH username for deploy
+- `EC2_SSH_KEY` — SSH private key used by `appleboy/ssh-action`
 
-- Code is pushed to the main branch
-
-It can also be triggered manually using “Run Workflow” inside GitHub Actions.
-
-This supports both automated CI and manual builds.
-
----
-
-## Running the Workflow Manually
-
-Navigate to:
-
-GitHub → Actions → Select workflow → Run workflow
-
-You may want to trigger the workflow manually when:
-
-- Testing the pipeline
-- Rebuilding after changing secrets
-- Deploying without making new commits
+Make sure these are populated if you want CI to push images and perform the SSH deploy.
 
 ---
 
-## Repository Structure
+## Deployment notes (CD)
 
-project/
-Dockerfile  
- app/ (your application code)  
- .github/workflows/docker-ci.yml
+The workflow's deploy step runs this sequence on the remote host:
+
+```sh
+docker pull <docker-username>/fastapi-demo:latest
+docker compose up -d fastapi-app
+sleep 3
+curl -f http://localhost || (echo "Health check FAILED" && docker logs fastapi-app --tail 50 && exit 1)
+```
+
+- Ensure the remote host has Docker and docker-compose installed.
+- Confirm the `docker compose` service name in your `docker-compose.yml` on the server matches `fastapi-app` or adjust the workflow.
+- For production, prefer deploying by a specific image tag (for example the commit SHA) instead of `latest` for repeatability and safe rollbacks.
 
 ---
 
-## Summary
+## Troubleshooting
 
-This repository contains a complete CI/CD pipeline that:
+- Missing requirements file error in Actions: ensure `test-template.yml` points to `app/requirements.txt` (this repo uses that path).
+- Container validation `curl` failing in CI: check container logs with `docker logs <container>` and increase `sleep` before `curl` if the app needs more startup time.
+- SSH deploy failing: verify you can SSH to the host manually with the same key and user; verify `docker pull` works from the host.
 
-- Builds Docker images automatically
-- Uses GitHub Actions as the automation engine
-- Pushes images to Docker Hub securely
-- Ensures consistent and reproducible builds
-- Demonstrates essential DevOps and cloud engineering skills
+Useful commands:
 
-This setup is suitable for portfolio use, interviews, and real-world containerized application deployments.
+```bash
+# untrack pytest cache if it was accidentally committed
+git rm -r --cached app/.pytest_cache
+git commit -m "Stop tracking pytest cache"
+
+# check which .gitignore rule matches
+git check-ignore -v app/.pytest_cache
+```
