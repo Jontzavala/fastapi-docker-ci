@@ -89,3 +89,4 @@ resource "aws_instance" "app" {
     Name = "fastapi-docker-ci-app"
   }
 }
+# Adding comment to see if terraform ci will run on pull request.
